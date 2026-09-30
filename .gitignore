@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+
+# Node / React
+node_modules/
+dist/
+build/
+.next/
+
+# Large Model Weights & Data
+models/xray/*.pth
+models/xray/*.bin
+models/ct/*.pth
+models/mri/*.pth
+models/ultrasound/*.pth
+data/raw/
+data/cache/
+
+# Environment & Logs
+.env
+.env.local
+*.log
+.vscode/
+.idea/
