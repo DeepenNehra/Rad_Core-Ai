@@ -24,6 +24,12 @@ models/ultrasound/*.pth
 data/raw/
 data/cache/
 
+# Database
+*.db
+*.sqlite
+*.sqlite3
+medivista_cases.db
+
 # Environment & Logs
 .env
 .env.local

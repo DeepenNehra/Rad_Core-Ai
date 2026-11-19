@@ -78,6 +78,37 @@ class ClinicalDecisionSupport(BaseModel):
     guidelines_referenced: List[str] = Field(default_factory=list, description="Accredited clinical guidelines cited (ATS/IDSA, GOLD)")
     human_oversight_required: bool = Field(default=True, description="Strict safety constraint requiring physician sign-off")
 
+class PrescriptionItem(BaseModel):
+    """
+    Standardized clinician-reviewable prescription recommendation.
+    """
+    medication_name: str = Field(..., description="Brand/Generic medication title")
+    dosage: str = Field(..., description="Dosage specification (e.g. 625mg)")
+    frequency: str = Field(..., description="Dosing schedule (e.g. Twice daily after meals)")
+    duration: str = Field(..., description="Treatment course duration (e.g. 7 days)")
+    route: str = Field(default="Oral", description="Administration route (Oral, IV, Inhalation, Topical)")
+    instructions: str = Field(..., description="Clinical patient administration directions")
+    precaution: Optional[str] = Field(default=None, description="Important contraindication or cautionary notes")
+
+class SequentialCareStep(BaseModel):
+    """
+    Step in a time-ordered chronological recovery or care plan.
+    """
+    step_number: int = Field(..., description="Sequential order sequence")
+    phase: str = Field(..., description="Phase title (e.g. Immediate Triage, Active Therapy, Convalescence)")
+    timeframe: str = Field(..., description="Time window (e.g. First 24 Hours, Days 2-5, Week 2-4)")
+    actions: List[str] = Field(default_factory=list, description="Specific clinical and patient action items")
+
+class PatientGuidance(BaseModel):
+    """
+    Comprehensive Patient Guidance, Avoidance Triggers & Structured Care Plan.
+    """
+    things_to_avoid: List[str] = Field(default_factory=list, description="Activities, dietary triggers, exposures or drugs to strictly avoid")
+    lifestyle_and_diet_recommendations: List[str] = Field(default_factory=list, description="Actionable supportive recovery suggestions")
+    red_flag_warning_symptoms: List[str] = Field(default_factory=list, description="Emergency warning symptoms requiring immediate ER admission")
+    sequential_care_plan: List[SequentialCareStep] = Field(default_factory=list, description="Chronological step-by-step care timeline")
+    prescriptions_draft: List[PrescriptionItem] = Field(default_factory=list, description="Draft physician-reviewable prescription regimen")
+
 class StudyAnalysisResponse(BaseModel):
     """
     Master Response Payload returned to Doctor Workstation (PRD Section 11 & Diagram Box 4).
@@ -90,4 +121,5 @@ class StudyAnalysisResponse(BaseModel):
     evidence_chain: List[EvidenceChainLink] = Field(default_factory=list, description="Full traceable AI Evidence Chain")
     radiology_report: RadiologyReport = Field(..., description="Complete generated Findings & Impression report")
     clinical_decision_support: ClinicalDecisionSupport = Field(..., description="Evidence-grounded decision support guidance")
+    patient_guidance: Optional[PatientGuidance] = Field(default=None, description="Patient care guidance, prescriptions, and phased timeline")
     processing_time_ms: float = Field(..., description="Total pipeline latency in milliseconds")
