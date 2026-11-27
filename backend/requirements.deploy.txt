@@ -1,0 +1,18 @@
+# Lean Cloud Deployment Dependencies (fits comfortably in 512MB Render/Railway free tier)
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+pydantic>=2.6.0
+python-multipart>=0.0.9
+
+# Authentication & Security
+PyJWT>=2.8.0
+bcrypt>=4.0.1
+
+# Imaging & Math
+pillow>=10.0.0
+numpy>=1.24.0
+pydicom>=2.4.0
+
+# Database (PostgreSQL + SQLite)
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.9

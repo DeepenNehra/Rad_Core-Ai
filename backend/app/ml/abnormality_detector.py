@@ -1,8 +1,14 @@
 import os
-import torch
 import numpy as np
 from typing import List, Dict, Any, Tuple, Optional
 from PIL import Image
+
+try:
+    import torch
+    HAS_TORCH = True
+except ImportError:
+    torch = None  # type: ignore
+    HAS_TORCH = False
 
 # ==============================================================================
 # 1. HUGGING FACE & MICROSOFT MODEL IMPORTS (PRD Section 1.1 & 14.1)
@@ -150,7 +156,10 @@ class AbnormalityDetector:
     and Microsoft BiomedCLIP (CT, MRI, Ultrasound) foundation models.
     """
     def __init__(self):
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if HAS_TORCH:
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        else:
+            self.device = "cpu"
         self.biovil_model = None
         self.biovil_tokenizer = None
         self.biomedclip_model = None
