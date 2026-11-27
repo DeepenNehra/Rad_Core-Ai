@@ -10,7 +10,9 @@ PROJECT_ROOT = BACKEND_DIR.parent
 
 
 def _resolve_database_url() -> str:
-    raw_url = os.getenv("DATABASE_URL", "sqlite:///./medivista_cases.db")
+    raw_url = (os.getenv("DATABASE_URL") or "").strip()
+    if not raw_url:
+        return "sqlite:///./medivista_cases.db"
     # Render / Heroku / Railway sometimes provide postgres:// which SQLAlchemy 2.x rejects
     if raw_url.startswith("postgres://"):
         return raw_url.replace("postgres://", "postgresql://", 1)
@@ -45,7 +47,9 @@ class Settings:
         "medivista-ai-clinical-secret-key-change-in-production-2026"
     )
     JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "720"))
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(
+        (os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES") or "720").strip()
+    )
 
     # Default Demo Clinician (auto-seeded on fresh DB if no users exist)
     DEMO_DOCTOR_USERNAME: str = os.getenv("DEMO_DOCTOR_USERNAME", "dr.nehra")

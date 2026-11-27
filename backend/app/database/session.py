@@ -29,14 +29,25 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Engine & session factory
 # ---------------------------------------------------------------------------
-DATABASE_URL = settings.DATABASE_URL
+DATABASE_URL = (settings.DATABASE_URL or "").strip() or "sqlite:///./medivista_cases.db"
 _is_sqlite = DATABASE_URL.startswith("sqlite")
 
-engine_kwargs = {"echo": False, "pool_pre_ping": True}
-if _is_sqlite:
-    engine_kwargs["connect_args"] = {"check_same_thread": False}
 
-engine = create_engine(DATABASE_URL, **engine_kwargs)
+def _build_engine(db_url: str):
+    kwargs = {"echo": False, "pool_pre_ping": True}
+    if db_url.startswith("sqlite"):
+        kwargs["connect_args"] = {"check_same_thread": False}
+    try:
+        return create_engine(db_url, **kwargs), db_url
+    except Exception as exc:
+        logger.error("Failed to initialize SQLAlchemy engine for configured DATABASE_URL (%s): %s", db_url.split("://")[0], exc)
+        fallback_url = "sqlite:///./medivista_cases.db"
+        logger.warning("Falling back to local SQLite database: %s", fallback_url)
+        return create_engine(fallback_url, echo=False, pool_pre_ping=True, connect_args={"check_same_thread": False}), fallback_url
+
+
+engine, DATABASE_URL = _build_engine(DATABASE_URL)
+_is_sqlite = DATABASE_URL.startswith("sqlite")
 
 SessionLocal = sessionmaker(
     autocommit=False,

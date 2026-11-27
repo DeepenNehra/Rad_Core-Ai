@@ -15,7 +15,7 @@ for p in [PROJECT_ROOT, BACKEND_DIR]:
 try:
     from backend.app.ml.abnormality_detector import AbnormalityDetector, MODALITY_KNOWLEDGE_BASE
 except ImportError:
-    from app.ml.abnormality_detector import AbnormalityDetector, MODALITY_KNOWLEDGE_BASE
+    from app.ml.abnormality_detector import AbnormalityDetector, MODALITY_KNOWLEDGE_BASE  # type: ignore[import-not-found]
 
 def test_multimodal_detector():
     print("Testing AbnormalityDetector with Microsoft Models Knowledge Base...")
