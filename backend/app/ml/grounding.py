@@ -227,19 +227,9 @@ def generate_attention_heatmap(pil_img: Image.Image, findings: List[dict]) -> Im
 def encode_image_to_base64(pil_img: Image.Image) -> str:
     """
     Encode a PIL image as a base64 PNG string for JSON transport.
-
-    Parameters
-    ----------
-    pil_img:
-        Any PIL image.
-
-    Returns
-    -------
-    str
-        Base64-encoded PNG bytes (no ``data:image/png;base64,`` prefix).
     """
     buffer = io.BytesIO()
-    pil_img.convert("RGB").save(buffer, format="PNG", optimize=True)
+    pil_img.convert("RGB").save(buffer, format="PNG", compress_level=4)
     buffer.seek(0)
     return base64.b64encode(buffer.read()).decode("utf-8")
 
@@ -247,25 +237,12 @@ def encode_image_to_base64(pil_img: Image.Image) -> str:
 def run_grounding(pil_img: Image.Image, findings: List[dict]) -> dict:
     """
     Full grounding pipeline: annotate + heatmap + base64 encode.
-
-    Findings that do not carry bounding-box information are counted but
-    skipped for spatial annotation — the pipeline never raises on missing
-    keys.
-
-    Parameters
-    ----------
-    pil_img:
-        Source medical image.
-    findings:
-        List of finding dicts from the ML model.
-
-    Returns
-    -------
-    dict
-        ``annotated_image_b64``, ``heatmap_image_b64``,
-        ``grounded_findings_count`` (int — findings with bounding boxes).
     """
-    w, h = pil_img.size
+    working_img = pil_img.convert("RGB").copy()
+    if max(working_img.size) > 1024:
+        working_img.thumbnail((1024, 1024), Image.Resampling.LANCZOS)
+
+    w, h = working_img.size
 
     # Count how many findings actually have spatial information
     grounded_count = sum(
@@ -274,17 +251,17 @@ def run_grounding(pil_img: Image.Image, findings: List[dict]) -> dict:
 
     # Annotated image
     try:
-        annotated = draw_bounding_boxes(pil_img, findings)
+        annotated = draw_bounding_boxes(working_img, findings)
     except Exception as exc:
         logger.warning("draw_bounding_boxes failed: %s — returning original.", exc)
-        annotated = pil_img.convert("RGB")
+        annotated = working_img
 
     # Heatmap image
     try:
-        heatmap = generate_attention_heatmap(pil_img, findings)
+        heatmap = generate_attention_heatmap(working_img, findings)
     except Exception as exc:
         logger.warning("generate_attention_heatmap failed: %s — returning original.", exc)
-        heatmap = pil_img.convert("RGB")
+        heatmap = working_img
 
     return {
         "annotated_image_b64": encode_image_to_base64(annotated),

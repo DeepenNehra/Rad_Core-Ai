@@ -98,7 +98,9 @@ def load_and_preprocess_image(
                     norm_255 = np.zeros_like(pixel_array, dtype=np.uint8)
 
                 pil_img = Image.fromarray(norm_255).convert("RGB")
-                norm_array = (norm_255.astype(np.float32) / 255.0)
+                if max(pil_img.size) > 1024:
+                    pil_img.thumbnail((1024, 1024), Image.Resampling.LANCZOS)
+                norm_array = np.array(pil_img.convert("L"), dtype=np.float32) / 255.0
                 return norm_array, pil_img, metadata
 
         except Exception as e:
@@ -110,6 +112,10 @@ def load_and_preprocess_image(
     metadata["format"] = pil_img.format or "PNG/JPEG"
     metadata["original_size"] = (width, height)
     metadata["is_dicom"] = False
+
+    # Cap working image to max 1024px to prevent cloud OOM & keep grounding fast
+    if max(width, height) > 1024:
+        pil_img.thumbnail((1024, 1024), Image.Resampling.LANCZOS)
 
     # Convert to grayscale float array normalized to [0.0, 1.0]
     gray_img = pil_img.convert("L")

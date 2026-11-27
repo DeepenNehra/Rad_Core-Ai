@@ -56,9 +56,7 @@ export const api = {
 
   // ---------------- Multimodal Analysis ----------------
   async analyzeStudy(formData: FormData): Promise<StudyAnalysisResponse> {
-    const res = await http.post<StudyAnalysisResponse>('/analyze', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const res = await http.post<StudyAnalysisResponse>('/analyze', formData);
     return res.data;
   },
 
