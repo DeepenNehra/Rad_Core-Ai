@@ -89,14 +89,20 @@ def _get_bbox(finding: dict, img_width: int, img_height: int) -> Optional[Tuple[
 
 
 def _try_load_font(size: int = 14) -> ImageFont.ImageFont:
-    """Return a truetype font if available, else the default bitmap font."""
-    try:
-        return ImageFont.truetype("arial.ttf", size)
-    except OSError:
+    """Return a scalable truetype/default font at the requested pixel size."""
+    for font_path in (
+        "arial.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    ):
         try:
-            return ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", size)
+            return ImageFont.truetype(font_path, size)
         except OSError:
-            return ImageFont.load_default()
+            continue
+    try:
+        return ImageFont.load_default(size=size)  # Pillow >= 10.1
+    except TypeError:
+        return ImageFont.load_default()
 
 
 # ---------------------------------------------------------------------------
@@ -106,28 +112,16 @@ def _try_load_font(size: int = 14) -> ImageFont.ImageFont:
 
 def draw_bounding_boxes(pil_img: Image.Image, findings: List[dict]) -> Image.Image:
     """
-    Draw colour-coded bounding boxes and labels on *pil_img*.
-
-    The image is first converted to RGB so that colour drawing works
-    regardless of the source mode (L, RGBA, …).
-
-    Parameters
-    ----------
-    pil_img:
-        Source medical image.
-    findings:
-        List of finding dicts.  Each may optionally carry a
-        ``bounding_box`` / ``bbox`` key; findings without one are skipped.
-
-    Returns
-    -------
-    Image.Image
-        A new RGB image with annotations drawn on it.
+    Draw colour-coded bounding boxes and non-clipping labels on *pil_img*.
     """
     annotated = pil_img.convert("RGB").copy()
     draw = ImageDraw.Draw(annotated)
-    font = _try_load_font(14)
     w, h = annotated.size
+
+    min_dim = max(1, min(w, h))
+    line_width = max(2, min(5, min_dim // 140))
+    font_size = max(11, min(20, min_dim // 28))
+    font = _try_load_font(font_size)
 
     drawn = 0
     for finding in findings:
@@ -136,33 +130,53 @@ def draw_bounding_boxes(pil_img: Image.Image, findings: List[dict]) -> Image.Ima
             continue
 
         x0, y0, x1, y1 = coords
+        # Clamp inside canvas margin so borders are never clipped at edges
+        x0 = max(line_width, min(x0, w - line_width - 10))
+        y0 = max(line_width, min(y0, h - line_width - 10))
+        x1 = max(x0 + 10, min(x1, w - line_width - 1))
+        y1 = max(y0 + 10, min(y1, h - line_width - 1))
+
         colour = _get_finding_colour(finding)
 
-        # Draw rectangle (thick border via multiple offset rectangles)
-        for offset in range(_BOX_LINE_WIDTH):
+        # Draw crisp thick rectangle
+        for offset in range(line_width):
             draw.rectangle(
                 [x0 - offset, y0 - offset, x1 + offset, y1 + offset],
                 outline=colour,
             )
 
-        # Build label text
+        # Build concise label text
         label_text = finding.get("label", "Finding")
+        short_label = label_text.split("(")[0].strip()
         confidence = float(finding.get("confidence", 0.0))
-        display_text = f"{label_text} {confidence * 100:.0f}%"
+        display_text = f"{short_label} {confidence * 100:.0f}%"
 
-        # Draw label background chip
         try:
-            # Pillow >= 10.0 uses textbbox
-            bbox_text = draw.textbbox((x0, y0 - 20), display_text, font=font)
+            bbox_text = draw.textbbox((0, 0), display_text, font=font)
             text_w = bbox_text[2] - bbox_text[0]
             text_h = bbox_text[3] - bbox_text[1]
         except AttributeError:
             text_w, text_h = draw.textsize(display_text, font=font)  # type: ignore[attr-defined]
 
-        chip_y0 = max(0, y0 - text_h - 6)
-        chip_y1 = chip_y0 + text_h + 4
-        draw.rectangle([x0, chip_y0, x0 + text_w + 6, chip_y1], fill=colour)
-        draw.text((x0 + 3, chip_y0 + 2), display_text, fill=(255, 255, 255), font=font)
+        pad_x = 6
+        pad_y = 4
+        chip_w = text_w + pad_x * 2
+        chip_h = text_h + pad_y * 2
+
+        # Keep chip inside horizontal & vertical bounds
+        chip_x0 = max(0, min(x0, w - chip_w - 1))
+        if y0 >= chip_h + 2:
+            chip_y0 = y0 - chip_h - 1
+        elif y1 + chip_h + 2 <= h:
+            chip_y0 = y1 + 1
+        else:
+            chip_y0 = max(0, y0 + 2)
+
+        chip_x1 = min(w, chip_x0 + chip_w)
+        chip_y1 = min(h, chip_y0 + chip_h)
+
+        draw.rectangle([chip_x0, chip_y0, chip_x1, chip_y1], fill=colour)
+        draw.text((chip_x0 + pad_x, chip_y0 + pad_y - 1), display_text, fill=(255, 255, 255), font=font)
 
         drawn += 1
 
@@ -210,8 +224,9 @@ def generate_attention_heatmap(pil_img: Image.Image, findings: List[dict]) -> Im
         any_drawn = True
 
     if any_drawn:
-        # Gaussian blur spreads the colour into a smooth heatmap
-        heatmap_layer = heatmap_layer.filter(ImageFilter.GaussianBlur(radius=18))
+        # Scale Gaussian blur proportionally to image dimensions
+        blur_radius = max(6, min(22, min(w, h) // 24))
+        heatmap_layer = heatmap_layer.filter(ImageFilter.GaussianBlur(radius=blur_radius))
 
     # Composite: heatmap_layer at _HEATMAP_ALPHA on top of base
     alpha_channel = heatmap_layer.getchannel("A")
