@@ -31,7 +31,7 @@ export interface RadiologyReport {
   comparison: string;
   findings: string;
   impression: string;
-  urgency_level: "ROUTINE" | "INTERMEDIATE" | "URGENT";
+  urgency_level: 'ROUTINE' | 'INTERMEDIATE' | 'URGENT';
   disclaimer: string;
 }
 
@@ -110,17 +110,45 @@ export interface StudyAnalysisResponse {
   grounding?: GroundingData;
   uncertainty_summary?: UncertaintySummary;
   abstained_findings?: string[];
+  signed_off_by?: string | null;
+  signed_off_at?: string | null;
 }
 
 export interface StudySummary {
+  id?: number;
   study_id: string;
   patient_id?: string;
   modality: string;
   filename?: string;
-  age?: number;
-  gender?: string;
+  is_dicom?: boolean;
+  age?: number | null;
+  gender?: string | null;
   urgency_level: string;
   findings_count: number;
+  finding_count?: number;
+  top_finding?: string | null;
   has_critical_finding: boolean;
+  processing_time_ms?: number;
+  created_by_user?: string | null;
+  signed_off_by?: string | null;
+  signed_off_at?: string | null;
   created_at: string;
+}
+
+export interface ClinicianUser {
+  id: number;
+  username: string;
+  email: string;
+  full_name: string;
+  role: string;
+  department: string;
+  is_active: boolean;
+  created_at?: string | null;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  expires_in_minutes: number;
+  user: ClinicianUser;
 }

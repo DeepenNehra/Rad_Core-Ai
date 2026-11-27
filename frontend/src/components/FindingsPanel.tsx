@@ -1,4 +1,15 @@
 import React, { useState } from 'react';
+import {
+  Activity,
+  AlertOctagon,
+  AlertTriangle,
+  Info,
+  MapPin,
+  ShieldCheck,
+  CheckCircle2,
+  Ban,
+  Sparkles,
+} from 'lucide-react';
 import { PathologyFinding, UncertaintySummary } from '../types';
 
 interface FindingsPanelProps {
@@ -17,32 +28,33 @@ export const FindingsPanel: React.FC<FindingsPanelProps> = ({
   const [activeTab, setActiveTab] = useState<'detected' | 'ruledOut' | 'safety'>('detected');
 
   return (
-    <div className="bg-medical-panel rounded-xl border border-medical-border p-4 shadow-xl flex flex-col h-full">
-      {/* Panel Navigation */}
-      <div className="flex items-center justify-between pb-3 border-b border-medical-border mb-3">
+    <div className="bg-medical-panel/95 rounded-2xl border border-medical-border p-4 shadow-2xl flex flex-col h-full">
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between pb-3 border-b border-medical-border mb-3 gap-2">
         <div className="flex items-center space-x-2">
-          <span className="text-base font-semibold text-white">🔍 Structured Findings</span>
-          <span className="text-xs px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-mono">
+          <Activity className="w-4 h-4 text-cyan-400" />
+          <span className="text-sm font-bold text-white">Structured Findings</span>
+          <span className="text-[11px] px-2 py-0.5 rounded-md bg-cyan-500/10 text-cyan-300 border border-cyan-500/25 font-mono tabular-nums">
             {findings.length} Detected
           </span>
         </div>
 
-        <div className="flex items-center space-x-1 bg-medical-dark p-0.5 rounded-lg border border-medical-border text-xs">
+        <div className="flex items-center space-x-1 bg-medical-dark p-0.5 rounded-xl border border-medical-border text-xs">
           <button
             onClick={() => setActiveTab('detected')}
-            className={`px-2.5 py-1 rounded transition-colors ${
+            className={`px-2.5 py-1 rounded-lg transition-all ${
               activeTab === 'detected'
-                ? 'bg-cyan-500 text-black font-semibold'
+                ? 'bg-cyan-500 text-slate-950 font-semibold'
                 : 'text-medical-muted hover:text-white'
             }`}
           >
-            Pathologies ({findings.length})
+            Findings ({findings.length})
           </button>
           <button
             onClick={() => setActiveTab('ruledOut')}
-            className={`px-2.5 py-1 rounded transition-colors ${
+            className={`px-2.5 py-1 rounded-lg transition-all ${
               activeTab === 'ruledOut'
-                ? 'bg-cyan-500 text-black font-semibold'
+                ? 'bg-cyan-500 text-slate-950 font-semibold'
                 : 'text-medical-muted hover:text-white'
             }`}
           >
@@ -50,9 +62,9 @@ export const FindingsPanel: React.FC<FindingsPanelProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('safety')}
-            className={`px-2.5 py-1 rounded transition-colors ${
+            className={`px-2.5 py-1 rounded-lg transition-all ${
               activeTab === 'safety'
-                ? 'bg-cyan-500 text-black font-semibold'
+                ? 'bg-cyan-500 text-slate-950 font-semibold'
                 : 'text-medical-muted hover:text-white'
             }`}
           >
@@ -65,10 +77,10 @@ export const FindingsPanel: React.FC<FindingsPanelProps> = ({
       {activeTab === 'detected' && (
         <div className="space-y-3 overflow-y-auto max-h-[460px] pr-1">
           {findings.length === 0 ? (
-            <div className="text-center py-10 text-medical-muted">
-              <span className="text-3xl block mb-2">✨</span>
-              <p className="text-sm font-medium">No Pathologies Detected</p>
-              <p className="text-xs mt-1">Image features fall within normative reference distribution.</p>
+            <div className="text-center py-12 text-medical-muted space-y-2">
+              <Sparkles className="w-8 h-8 mx-auto text-emerald-400" />
+              <p className="text-sm font-medium text-white">No Pathologies Detected</p>
+              <p className="text-xs">Image features fall within normative reference distribution.</p>
             </div>
           ) : (
             findings.map((f) => {
@@ -78,25 +90,27 @@ export const FindingsPanel: React.FC<FindingsPanelProps> = ({
               return (
                 <div
                   key={f.id}
-                  className={`rounded-lg border p-3 transition-all ${
+                  className={`rounded-xl border p-3.5 transition-all ${
                     f.is_critical
                       ? 'bg-rose-950/20 border-rose-500/50 shadow-sm shadow-rose-950/40'
                       : f.confidence >= 0.8
-                      ? 'bg-medical-dark border-cyan-500/30'
-                      : 'bg-medical-dark border-amber-500/30'
+                      ? 'bg-medical-dark/90 border-cyan-500/30'
+                      : 'bg-medical-dark/90 border-amber-500/30'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2 mb-1.5">
                     <div className="flex items-center space-x-2">
-                      <span className="text-sm">
-                        {f.is_critical ? '🚨' : f.confidence >= 0.8 ? '⚠️' : 'ℹ️'}
-                      </span>
-                      <h3 className="font-semibold text-white text-sm tracking-tight">
-                        {f.label}
-                      </h3>
+                      {f.is_critical ? (
+                        <AlertOctagon className="w-4 h-4 text-rose-400 flex-shrink-0" />
+                      ) : f.confidence >= 0.8 ? (
+                        <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                      ) : (
+                        <Info className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+                      )}
+                      <h3 className="font-semibold text-white text-sm tracking-tight">{f.label}</h3>
                     </div>
 
-                    <div className="flex items-center space-x-1">
+                    <div className="flex items-center space-x-1 flex-shrink-0">
                       {f.is_critical && (
                         <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-rose-500 text-white">
                           CRITICAL
@@ -116,22 +130,24 @@ export const FindingsPanel: React.FC<FindingsPanelProps> = ({
                     </div>
                   </div>
 
-                  <p className="text-xs text-cyan-300/90 font-medium mb-1.5 flex items-center gap-1">
-                    <span>📍</span> {f.anatomical_location}
+                  <p className="text-xs text-cyan-300/90 font-medium mb-1.5 flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span>{f.anatomical_location}</span>
                   </p>
 
                   {f.evidence_text && (
-                    <p className="text-xs text-medical-muted italic bg-black/30 p-2 rounded border border-medical-border/40 mb-2">
-                      "{f.evidence_text}"
+                    <p className="text-xs text-medical-muted italic bg-black/30 p-2.5 rounded-lg border border-medical-border/40 mb-2.5">
+                      &ldquo;{f.evidence_text}&rdquo;
                     </p>
                   )}
 
-                  {/* Confidence & Uncertainty Bars */}
-                  <div className="grid grid-cols-2 gap-3 pt-1 border-t border-medical-border/40 text-[11px]">
+                  <div className="grid grid-cols-2 gap-3 pt-2 border-t border-medical-border/40 text-[11px]">
                     <div>
                       <div className="flex justify-between text-medical-text mb-1">
-                        <span>Calibrated Probability</span>
-                        <span className="font-mono font-semibold text-cyan-400">{confPct}%</span>
+                        <span>Probability</span>
+                        <span className="font-mono font-semibold text-cyan-400 tabular-nums">
+                          {confPct}%
+                        </span>
                       </div>
                       <div className="w-full bg-zinc-900 rounded-full h-1.5 overflow-hidden">
                         <div
@@ -149,8 +165,8 @@ export const FindingsPanel: React.FC<FindingsPanelProps> = ({
 
                     <div>
                       <div className="flex justify-between text-medical-text mb-1">
-                        <span>Epistemic Uncertainty</span>
-                        <span className="font-mono text-amber-400">{uncertPct}%</span>
+                        <span>Uncertainty</span>
+                        <span className="font-mono text-amber-400 tabular-nums">{uncertPct}%</span>
                       </div>
                       <div className="w-full bg-zinc-900 rounded-full h-1.5 overflow-hidden">
                         <div
@@ -162,9 +178,13 @@ export const FindingsPanel: React.FC<FindingsPanelProps> = ({
                   </div>
 
                   {f.bounding_box && (
-                    <div className="mt-2 text-[10px] text-medical-muted font-mono flex items-center gap-2">
-                      <span>Bounds: [{f.bounding_box.x}, {f.bounding_box.y}]</span>
-                      <span>Dim: {f.bounding_box.width}×{f.bounding_box.height}px</span>
+                    <div className="mt-2 text-[10px] text-medical-muted font-mono flex items-center gap-3 tabular-nums">
+                      <span>
+                        Bounds: [{f.bounding_box.x}, {f.bounding_box.y}]
+                      </span>
+                      <span>
+                        Size: {f.bounding_box.width}×{f.bounding_box.height}px
+                      </span>
                     </div>
                   )}
                 </div>
@@ -176,39 +196,47 @@ export const FindingsPanel: React.FC<FindingsPanelProps> = ({
 
       {/* Tab 2: Ruled Out Conditions */}
       {activeTab === 'ruledOut' && (
-        <div className="space-y-2 overflow-y-auto max-h-[460px]">
-          <div className="p-2.5 rounded bg-emerald-950/20 border border-emerald-500/30 text-xs text-emerald-300 mb-3">
-            🛡️ <strong>Negative Predictive Screening:</strong> The foundation vision backbone verified the following pathologies as absent or within normative limits.
+        <div className="space-y-2 overflow-y-auto max-h-[460px] pr-1">
+          <div className="p-3 rounded-xl bg-emerald-950/20 border border-emerald-500/30 text-xs text-emerald-300 mb-3 flex items-start gap-2">
+            <ShieldCheck className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+            <span>
+              <strong>Negative Predictive Screening:</strong> Verified absent or within normative limits.
+            </span>
           </div>
           {ruledOut.map((ro, idx) => (
             <div
               key={idx}
-              className="flex items-center space-x-2.5 p-2.5 rounded-lg bg-medical-dark border border-medical-border text-xs text-medical-text"
+              className="flex items-center space-x-2.5 p-2.5 rounded-xl bg-medical-dark border border-medical-border text-xs text-medical-text"
             >
-              <span className="text-emerald-400 font-bold">✓</span>
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
               <span>{ro}</span>
             </div>
           ))}
         </div>
       )}
 
-      {/* Tab 3: Epistemic Safety Gate Summary */}
+      {/* Tab 3: Epistemic Safety Gate */}
       {activeTab === 'safety' && (
-        <div className="space-y-4 overflow-y-auto max-h-[460px] text-xs">
-          <div className="p-3 bg-medical-dark rounded-lg border border-medical-border space-y-2">
-            <h4 className="font-semibold text-white">Epistemic Uncertainty Gate Statistics</h4>
-            <div className="grid grid-cols-2 gap-2 text-medical-muted pt-1">
+        <div className="space-y-4 overflow-y-auto max-h-[460px] text-xs pr-1">
+          <div className="p-3.5 bg-medical-dark rounded-xl border border-medical-border space-y-2">
+            <h4 className="font-semibold text-white flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-cyan-400" />
+              Epistemic Uncertainty Gate Statistics
+            </h4>
+            <div className="grid grid-cols-2 gap-2 text-medical-muted pt-1 tabular-nums">
               <div>Total Evaluated Candidates:</div>
               <div className="font-mono text-white text-right">
                 {uncertaintySummary?.total_findings ?? findings.length}
               </div>
               <div>High Confidence (≥80%):</div>
               <div className="font-mono text-emerald-400 text-right">
-                {uncertaintySummary?.high_confidence_count ?? findings.filter((f) => f.confidence >= 0.8).length}
+                {uncertaintySummary?.high_confidence_count ??
+                  findings.filter((f) => f.confidence >= 0.8).length}
               </div>
-              <div>Review Required (60-79%):</div>
+              <div>Review Required (60–79%):</div>
               <div className="font-mono text-amber-400 text-right">
-                {uncertaintySummary?.review_required_count ?? findings.filter((f) => f.confidence >= 0.6 && f.confidence < 0.8).length}
+                {uncertaintySummary?.review_required_count ??
+                  findings.filter((f) => f.confidence >= 0.6 && f.confidence < 0.8).length}
               </div>
               <div>Abstained (&lt;50% withheld):</div>
               <div className="font-mono text-rose-400 text-right">
@@ -218,25 +246,27 @@ export const FindingsPanel: React.FC<FindingsPanelProps> = ({
           </div>
 
           {abstained.length > 0 && (
-            <div className="p-3 bg-rose-950/20 border border-rose-500/40 rounded-lg">
+            <div className="p-3.5 bg-rose-950/20 border border-rose-500/40 rounded-xl">
               <h4 className="font-semibold text-rose-300 mb-1 flex items-center gap-1.5">
-                <span>🚫</span> Abstained Predictions (Withheld for Clinical Safety)
+                <Ban className="w-4 h-4" /> Abstained Predictions (Withheld for Safety)
               </h4>
               <p className="text-[11px] text-rose-200/80 mb-2">
-                The model refused to diagnose these conditions because confidence fell below the 50% safety gate:
+                Withheld because calibrated confidence fell below the 50% safety gate:
               </p>
               <ul className="list-disc list-inside space-y-1 text-medical-text">
                 {abstained.map((label, idx) => (
-                  <li key={idx} className="font-mono text-[11px]">{label}</li>
+                  <li key={idx} className="font-mono text-[11px]">
+                    {label}
+                  </li>
                 ))}
               </ul>
             </div>
           )}
 
-          <div className="p-3 bg-cyan-950/20 border border-cyan-500/30 rounded-lg text-medical-muted text-[11px] space-y-1">
+          <div className="p-3.5 bg-cyan-950/20 border border-cyan-500/30 rounded-xl text-medical-muted text-[11px] space-y-1">
             <p className="font-semibold text-cyan-300">Safety Policy Enforcement</p>
-            <p>• Medical AI models are calibrated using Platt scaling & Monte Carlo dropout.</p>
-            <p>• Uncalibrated high-entropy hypotheses are automatically filtered to prevent hallucinated diagnoses.</p>
+            <p>• Calibrated using Platt scaling &amp; Monte Carlo uncertainty estimation.</p>
+            <p>• High-entropy hypotheses are withheld to prevent hallucinated diagnoses.</p>
           </div>
         </div>
       )}

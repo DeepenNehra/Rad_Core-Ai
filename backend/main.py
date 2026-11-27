@@ -1,16 +1,17 @@
 """
 MEDIVISTA AI — Main Application Entrypoint.
 
-Starts the FastAPI server, initializes SQLite database schemas,
-registers CORS middleware, and mounts API v1 routes.
+Starts the FastAPI server, initializes database schemas (PostgreSQL or SQLite),
+configures CORS for Vercel & local React frontends, and mounts API v1 routes.
 """
 
 from __future__ import annotations
 
 import logging
+import os
 import sys
-from pathlib import Path
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -43,11 +44,8 @@ logger = logging.getLogger("medivista")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    Application startup and shutdown events.
-    """
+    """Application startup and shutdown events."""
     logger.info("Initializing MEDIVISTA AI backend...")
-    logger.info("Setting up SQLite database tables...")
     try:
         init_db()
         logger.info("Database initialized successfully.")
@@ -62,17 +60,23 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=getattr(settings, "PROJECT_NAME", "MEDIVISTA AI"),
     description=getattr(settings, "PROJECT_DESCRIPTION", "Multimodal Medical Imaging AI Copilot"),
-    version=getattr(settings, "VERSION", "1.0.0"),
+    version=getattr(settings, "VERSION", "1.1.0"),
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
 )
 
-# Configure Cross-Origin Resource Sharing (CORS) for Doctor Workstation UI
-cors_origins = getattr(settings, "BACKEND_CORS_ORIGINS", ["*"])
+# Configure CORS cleanly for local dev + Vercel deployments
+# (Using Bearer JWT headers, so allow_credentials=False with allow_origins=["*"] or explicit regex works cleanly across all origins)
+cors_origins = list(getattr(settings, "BACKEND_CORS_ORIGINS", []))
+extra_frontend = os.getenv("FRONTEND_URL", "").strip()
+if extra_frontend and extra_frontend not in cors_origins:
+    cors_origins.append(extra_frontend)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins if isinstance(cors_origins, list) else ["*"],
+    allow_origins=cors_origins if cors_origins else ["*"],
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -84,21 +88,21 @@ app.include_router(api_v1_router)
 
 @app.get("/", summary="Root Status Endpoint")
 async def root() -> JSONResponse:
-    """
-    Root discovery endpoint.
-    """
+    """Root discovery endpoint."""
     return JSONResponse(
         content={
             "service": "MEDIVISTA AI — Multimodal Medical Imaging Copilot API",
             "status": "online",
-            "version": getattr(settings, "VERSION", "1.0.0"),
+            "version": getattr(settings, "VERSION", "1.1.0"),
             "documentation": "/docs",
             "api_v1": "/api/v1",
             "endpoints": {
+                "login": "POST /api/v1/auth/login",
+                "register": "POST /api/v1/auth/register",
                 "analyze": "POST /api/v1/analyze",
                 "health": "GET /api/v1/health",
                 "modalities": "GET /api/v1/modalities",
-                "history": "GET /api/v1/history",
+                "history": "GET /api/v1/history (JWT protected)",
             },
         }
     )
@@ -106,9 +110,10 @@ async def root() -> JSONResponse:
 
 if __name__ == "__main__":
     import uvicorn
+    port = int(os.getenv("PORT", "8000"))
     print("\n" + "=" * 70)
     print("   MEDIVISTA AI — Multimodal Medical Imaging Copilot")
     print("   Microsoft BioViL-T & BiomedCLIP Foundation Model Engine")
-    print("   Listening on http://0.0.0.0:8000 | Interactive Docs: http://localhost:8000/docs")
+    print(f"   Listening on http://0.0.0.0:{port} | Docs: http://localhost:{port}/docs")
     print("=" * 70 + "\n")
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=os.getenv("ENV", "dev") == "dev")

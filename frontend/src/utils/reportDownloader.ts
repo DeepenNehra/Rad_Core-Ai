@@ -3,11 +3,12 @@ import { StudyAnalysisResponse } from '../types';
 /**
  * Downloads full plain-text clinical report and prescription draft.
  */
-export const downloadReportText = (data: StudyAnalysisResponse) => {
+export const downloadReportText = (data: StudyAnalysisResponse, signedOffBy?: string | null) => {
   const patient = data.patient_info;
   const report = data.radiology_report;
   const cds = data.clinical_decision_support;
   const guidance = data.patient_guidance;
+  const signer = signedOffBy || data.signed_off_by;
 
   let content = `================================================================================
                     MEDIVISTA AI — CLINICAL STUDY REPORT
@@ -18,17 +19,17 @@ STUDY INFORMATION:
 ------------------
 Study ID        : ${data.study_id}
 Modality        : ${data.modality}
-Processing Time : ${data.processing_time_ms.toFixed(1)} ms
+Processing Time : ${(data.processing_time_ms || 0).toFixed(1)} ms
 Triage Urgency  : ${report.urgency_level}
 Timestamp       : ${new Date().toLocaleString()}
-
+${signer ? `Verified By     : ${signer}\n` : ''}
 PATIENT DEMOGRAPHICS & CLINICAL HISTORY:
 ----------------------------------------
 Patient ID       : ${patient.patient_id}
 Age              : ${patient.age ? `${patient.age} Years` : 'Not provided'}
 Biological Sex   : ${patient.gender || 'Unknown'}
 Presenting Signs : ${patient.symptoms || 'None recorded'}
-Clinical History : ${patient.clinical_history || 'No prior thoracic history'}
+Clinical History : ${patient.clinical_history || 'No prior history'}
 
 ================================================================================
                          STRUCTURED RADIOLOGY REPORT
@@ -125,11 +126,12 @@ licensed physician before administration or clinical action.
  * Opens a hospital-grade printable report with print dialog
  * (allowing user to print or "Save as PDF").
  */
-export const printClinicalReport = (data: StudyAnalysisResponse) => {
+export const printClinicalReport = (data: StudyAnalysisResponse, signedOffBy?: string | null) => {
   const patient = data.patient_info;
   const report = data.radiology_report;
   const cds = data.clinical_decision_support;
   const guidance = data.patient_guidance;
+  const signer = signedOffBy || data.signed_off_by;
 
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
@@ -161,145 +163,40 @@ export const printClinicalReport = (data: StudyAnalysisResponse) => {
       justify-content: space-between;
       align-items: center;
     }
-    .logo {
-      font-size: 20pt;
-      font-weight: 800;
-      color: #0369a1;
-      letter-spacing: -0.5px;
-    }
-    .badge {
-      display: inline-block;
-      padding: 3px 8px;
-      font-size: 9pt;
-      font-weight: 700;
-      border-radius: 4px;
-      text-transform: uppercase;
-    }
+    .logo { font-size: 20pt; font-weight: 800; color: #0369a1; letter-spacing: -0.5px; }
+    .badge { display: inline-block; padding: 3px 8px; font-size: 9pt; font-weight: 700; border-radius: 4px; text-transform: uppercase; }
     .badge-urgent { background: #fee2e2; color: #b91c1c; border: 1px solid #f87171; }
     .badge-intermediate { background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; }
     .badge-routine { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
-    
-    .meta-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 16px;
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 6px;
-    }
-    .meta-table td {
-      padding: 6px 10px;
-      font-size: 9.5pt;
-      border: 1px solid #e2e8f0;
-    }
+    .meta-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; background: #f8fafc; border: 1px solid #e2e8f0; }
+    .meta-table td { padding: 6px 10px; font-size: 9.5pt; border: 1px solid #e2e8f0; }
     .meta-label { font-weight: bold; color: #475569; width: 18%; }
     .meta-val { color: #0f172a; width: 32%; font-weight: 500; }
-    
-    h2 {
-      font-size: 13pt;
-      color: #0369a1;
-      border-bottom: 1px solid #cbd5e1;
-      padding-bottom: 4px;
-      margin-top: 18px;
-      margin-bottom: 8px;
-    }
+    h2 { font-size: 13pt; color: #0369a1; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; margin-top: 18px; margin-bottom: 8px; }
     h3 { font-size: 11pt; color: #334155; margin-top: 12px; margin-bottom: 4px; }
-    
-    .findings-box {
-      background: #f8fafc;
-      border: 1px solid #cbd5e1;
-      border-radius: 6px;
-      padding: 10px 14px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 9.5pt;
-      white-space: pre-wrap;
-      margin-bottom: 12px;
-    }
-    .impression-box {
-      background: #fffbeb;
-      border: 1px solid #fcd34d;
-      border-radius: 6px;
-      padding: 10px 14px;
-      font-size: 10.5pt;
-      font-weight: 600;
-      color: #78350f;
-      white-space: pre-wrap;
-      margin-bottom: 16px;
-    }
-    
-    table.data-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 8px;
-      margin-bottom: 14px;
-      font-size: 9.5pt;
-    }
-    table.data-table th, table.data-table td {
-      border: 1px solid #cbd5e1;
-      padding: 7px 10px;
-      text-align: left;
-    }
+    .findings-box { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 14px; font-family: ui-monospace, monospace; font-size: 9.5pt; white-space: pre-wrap; margin-bottom: 12px; }
+    .impression-box { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 6px; padding: 10px 14px; font-size: 10.5pt; font-weight: 600; color: #78350f; white-space: pre-wrap; margin-bottom: 16px; }
+    table.data-table { width: 100%; border-collapse: collapse; margin-top: 8px; margin-bottom: 14px; font-size: 9.5pt; }
+    table.data-table th, table.data-table td { border: 1px solid #cbd5e1; padding: 7px 10px; text-align: left; }
     table.data-table th { background: #f1f5f9; color: #334155; }
-    
-    .avoid-box {
-      background: #fef2f2;
-      border: 1px solid #fecaca;
-      border-radius: 6px;
-      padding: 10px 14px;
-      margin-bottom: 14px;
-    }
+    .avoid-box { background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 10px 14px; margin-bottom: 14px; }
     .avoid-item { color: #991b1b; font-size: 9.5pt; margin-bottom: 4px; }
-    
-    .red-flag-box {
-      background: #fff1f2;
-      border: 1px solid #fda4af;
-      border-radius: 6px;
-      padding: 10px 14px;
-      margin-bottom: 14px;
-    }
+    .red-flag-box { background: #fff1f2; border: 1px solid #fda4af; border-radius: 6px; padding: 10px 14px; margin-bottom: 14px; }
     .red-flag-item { color: #be123c; font-size: 9.5pt; margin-bottom: 4px; font-weight: 600; }
-    
-    .phase-card {
-      border: 1px solid #e2e8f0;
-      border-left: 4px solid #0284c7;
-      background: #f8fafc;
-      padding: 8px 12px;
-      margin-bottom: 8px;
-      border-radius: 4px;
-    }
+    .phase-card { border: 1px solid #e2e8f0; border-left: 4px solid #0284c7; background: #f8fafc; padding: 8px 12px; margin-bottom: 8px; border-radius: 4px; }
     .phase-title { font-weight: bold; color: #0369a1; font-size: 10pt; }
     .phase-time { font-size: 8.5pt; color: #64748b; font-weight: normal; margin-left: 8px; }
     .phase-action { font-size: 9pt; color: #334155; margin-top: 3px; }
-    
-    .footer-disclaimer {
-      margin-top: 24px;
-      padding-top: 12px;
-      border-top: 1px dashed #94a3b8;
-      font-size: 8pt;
-      color: #64748b;
-      line-height: 1.4;
-    }
-    .sign-off {
-      margin-top: 24px;
-      display: flex;
-      justify-content: space-between;
-      font-size: 9pt;
-      color: #475569;
-    }
-    .sign-line {
-      width: 220px;
-      border-top: 1px solid #334155;
-      margin-top: 40px;
-      text-align: center;
-      padding-top: 4px;
-    }
+    .footer-disclaimer { margin-top: 24px; padding-top: 12px; border-top: 1px dashed #94a3b8; font-size: 8pt; color: #64748b; line-height: 1.4; }
+    .sign-off { margin-top: 24px; display: flex; justify-content: space-between; font-size: 9pt; color: #475569; }
+    .sign-line { width: 240px; border-top: 1px solid #334155; margin-top: 32px; text-align: center; padding-top: 4px; }
   </style>
 </head>
 <body>
   <div class="header">
     <div>
       <div class="logo">MEDIVISTA AI <span style="font-size: 11pt; color: #64748b; font-weight: normal;">| Multimodal Medical Imaging Copilot</span></div>
-      <div style="font-size: 9pt; color: #64748b;">Microsoft BioViL-T & BiomedCLIP Evidence-Grounded Diagnostic Support</div>
+      <div style="font-size: 9pt; color: #64748b;">Microsoft BioViL-T &amp; BiomedCLIP Evidence-Grounded Diagnostic Support</div>
     </div>
     <div>
       <span class="badge ${
@@ -316,7 +213,7 @@ export const printClinicalReport = (data: StudyAnalysisResponse) => {
     <tr>
       <td class="meta-label">Study ID:</td>
       <td class="meta-val">${data.study_id}</td>
-      <td class="meta-label">Date & Time:</td>
+      <td class="meta-label">Date &amp; Time:</td>
       <td class="meta-val">${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</td>
     </tr>
     <tr>
@@ -329,7 +226,7 @@ export const printClinicalReport = (data: StudyAnalysisResponse) => {
       <td class="meta-label">Modality:</td>
       <td class="meta-val">${data.modality}</td>
       <td class="meta-label">Pipeline Latency:</td>
-      <td class="meta-val">${data.processing_time_ms.toFixed(1)} ms</td>
+      <td class="meta-val">${(data.processing_time_ms || 0).toFixed(1)} ms</td>
     </tr>
     <tr>
       <td class="meta-label">Symptoms:</td>
@@ -348,7 +245,7 @@ export const printClinicalReport = (data: StudyAnalysisResponse) => {
   <h3>Diagnostic Impression</h3>
   <div class="impression-box">${report.impression}</div>
 
-  <h2>2. Clinical Decision Support & Differentials</h2>
+  <h2>2. Clinical Decision Support &amp; Differentials</h2>
   <table class="data-table">
     <thead>
       <tr>
@@ -374,7 +271,7 @@ export const printClinicalReport = (data: StudyAnalysisResponse) => {
     <thead>
       <tr>
         <th>Medication</th>
-        <th>Dosage & Route</th>
+        <th>Dosage &amp; Route</th>
         <th>Frequency</th>
         <th>Duration</th>
         <th>Instructions</th>
@@ -395,12 +292,10 @@ export const printClinicalReport = (data: StudyAnalysisResponse) => {
 
   <h2>4. Critical Avoidance Guidelines (What Patient Must Avoid)</h2>
   <div class="avoid-box">
-    ${guidance.things_to_avoid.map((item) => `
-      <div class="avoid-item">${item}</div>
-    `).join('')}
+    ${guidance.things_to_avoid.map((item) => `<div class="avoid-item">${item}</div>`).join('')}
   </div>
 
-  <h2>5. Sequential Recovery & Care Milestones</h2>
+  <h2>5. Sequential Recovery &amp; Care Milestones</h2>
   <div>
     ${guidance.sequential_care_plan.map((step) => `
       <div class="phase-card">
@@ -412,19 +307,17 @@ export const printClinicalReport = (data: StudyAnalysisResponse) => {
 
   <h2>6. Emergency Red Flags (Seek Immediate Hospital Care)</h2>
   <div class="red-flag-box">
-    ${guidance.red_flag_warning_symptoms.map((rf) => `
-      <div class="red-flag-item">${rf}</div>
-    `).join('')}
+    ${guidance.red_flag_warning_symptoms.map((rf) => `<div class="red-flag-item">${rf}</div>`).join('')}
   </div>
   ` : ''}
 
   <div class="sign-off">
     <div>
       <div>Clinical Guidelines: ${cds.guidelines_referenced.slice(0, 2).join('; ')}</div>
-      <div>AI Analysis Verified & Approved by Attending Clinician</div>
+      <div>${signer ? `Digitally Verified by: <strong>${signer}</strong>` : 'Pending Attending Clinician Sign-Off'}</div>
     </div>
     <div>
-      <div class="sign-line">Physician Signature & Stamp</div>
+      <div class="sign-line">${signer ? `${signer} (Digital Sign-Off)` : 'Physician Signature &amp; Stamp'}</div>
     </div>
   </div>
 
@@ -437,7 +330,7 @@ export const printClinicalReport = (data: StudyAnalysisResponse) => {
     window.onload = function() {
       setTimeout(function() {
         window.print();
-      }, 400);
+      }, 350);
     };
   </script>
 </body>

@@ -1,6 +1,6 @@
 """
-SQLAlchemy ORM models for MEDIVISTA AI case history.
-Uses SQLAlchemy 2.x style with DeclarativeBase.
+SQLAlchemy ORM models for MEDIVISTA AI case history and clinician authentication.
+Uses SQLAlchemy 2.x style with declarative_base.
 """
 
 import json
@@ -18,15 +18,37 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base
 
-# ---------------------------------------------------------------------------
-# Base
-# ---------------------------------------------------------------------------
 Base = declarative_base()
 
 
-# ---------------------------------------------------------------------------
-# Model
-# ---------------------------------------------------------------------------
+class UserRecord(Base):
+    """Clinician / Physician user account for JWT-protected workstation access."""
+
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String(64), unique=True, nullable=False, index=True)
+    email = Column(String(120), unique=True, nullable=False, index=True)
+    full_name = Column(String(120), nullable=False)
+    role = Column(String(32), default="Radiologist", nullable=False)
+    department = Column(String(80), default="Diagnostic Radiology", nullable=False)
+    hashed_password = Column(String(255), nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    def to_public_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "username": self.username,
+            "email": self.email,
+            "full_name": self.full_name,
+            "role": self.role,
+            "department": self.department,
+            "is_active": self.is_active,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
 class StudyRecord(Base):
     """Persisted record for a single radiology study analysis."""
 
@@ -58,25 +80,25 @@ class StudyRecord(Base):
     radiology_report_json = Column(Text, nullable=True)   # RadiologyReport dict
     cds_json = Column(Text, nullable=True)                # ClinicalDecisionSupport dict
     patient_guidance_json = Column(Text, nullable=True)   # PatientGuidance dict
+    evidence_chain_json = Column(Text, nullable=True)     # List[EvidenceChainLink]
 
     # Risk / workflow fields
     urgency_level = Column(String(20), default="ROUTINE", nullable=False)
     processing_time_ms = Column(Float, nullable=True)
     has_critical_finding = Column(Boolean, default=False, nullable=False)
 
+    # Clinician Audit & Sign-Off
+    created_by_user = Column(String(120), nullable=True)
+    signed_off_by = Column(String(120), nullable=True)
+    signed_off_at = Column(DateTime, nullable=True)
+
     # Audit
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
-    # ---------------------------------------------------------------------------
-    # Additional composite index for time-ordered patient look-ups
-    # ---------------------------------------------------------------------------
     __table_args__ = (
         Index("ix_study_records_patient_created", "patient_id", "created_at"),
     )
 
-    # ---------------------------------------------------------------------------
-    # Helpers
-    # ---------------------------------------------------------------------------
     def __repr__(self) -> str:
         return (
             f"<StudyRecord id={self.id!r} study_id={self.study_id!r} "
@@ -84,11 +106,7 @@ class StudyRecord(Base):
         )
 
     def to_summary_dict(self) -> dict:
-        """
-        Return a lightweight dict suitable for history list views.
-        Heavy JSON blobs (findings, reports, CDS) are summarised, not inlined.
-        """
-        # Parse findings JSON for quick stats
+        """Return a lightweight dict suitable for history list views."""
         findings: list = []
         try:
             raw = self.findings_json
@@ -111,9 +129,13 @@ class StudyRecord(Base):
             "gender": self.gender,
             "urgency_level": self.urgency_level,
             "has_critical_finding": self.has_critical_finding,
+            "findings_count": finding_count,
             "finding_count": finding_count,
             "top_finding": top_finding,
             "processing_time_ms": self.processing_time_ms,
+            "created_by_user": self.created_by_user,
+            "signed_off_by": self.signed_off_by,
+            "signed_off_at": self.signed_off_at.isoformat() if self.signed_off_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
@@ -130,11 +152,21 @@ class StudyRecord(Base):
 
         return {
             **self.to_summary_dict(),
+            "patient_info": {
+                "patient_id": self.patient_id or "PT-UNKNOWN",
+                "age": self.age,
+                "gender": self.gender or "Unknown",
+                "symptoms": self.symptoms,
+                "clinical_history": self.clinical_history,
+            },
             "symptoms": self.symptoms,
             "clinical_history": self.clinical_history,
-            "findings": _safe_json(self.findings_json),
-            "ruled_out": _safe_json(self.ruled_out_json),
+            "findings": _safe_json(self.findings_json) or [],
+            "ruled_out_negatives": _safe_json(self.ruled_out_json) or [],
+            "ruled_out": _safe_json(self.ruled_out_json) or [],
             "radiology_report": _safe_json(self.radiology_report_json),
+            "clinical_decision_support": _safe_json(self.cds_json),
             "cds": _safe_json(self.cds_json),
             "patient_guidance": _safe_json(self.patient_guidance_json),
+            "evidence_chain": _safe_json(self.evidence_chain_json) or [],
         }
