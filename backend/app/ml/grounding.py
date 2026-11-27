@@ -254,8 +254,8 @@ def run_grounding(pil_img: Image.Image, findings: List[dict]) -> dict:
     Full grounding pipeline: annotate + heatmap + base64 encode.
     """
     working_img = pil_img.convert("RGB").copy()
-    if max(working_img.size) > 1024:
-        working_img.thumbnail((1024, 1024), Image.Resampling.LANCZOS)
+    if max(working_img.size) > 768:
+        working_img.thumbnail((768, 768), Image.Resampling.LANCZOS)
 
     w, h = working_img.size
 

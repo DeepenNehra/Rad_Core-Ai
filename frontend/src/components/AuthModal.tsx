@@ -204,6 +204,8 @@ export const AuthFormCard: React.FC<AuthCardProps> = ({ embedded = false }) => {
           </label>
           <input
             type="text"
+            name="username"
+            autoComplete="username"
             required
             value={username}
             onChange={(e) => setUsername(e.target.value)}
@@ -218,6 +220,8 @@ export const AuthFormCard: React.FC<AuthCardProps> = ({ embedded = false }) => {
           </label>
           <input
             type="password"
+            name="password"
+            autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
             required
             minLength={4}
             value={password}

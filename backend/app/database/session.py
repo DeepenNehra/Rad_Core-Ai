@@ -14,7 +14,7 @@ import logging
 from datetime import datetime
 from typing import Generator, List, Optional
 
-from sqlalchemy import create_engine, desc, inspect, text
+from sqlalchemy import create_engine, desc, func, inspect, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from .models import Base, StudyRecord, UserRecord
@@ -80,6 +80,7 @@ def _ensure_study_columns() -> None:
         existing_cols = {col["name"] for col in inspector.get_columns("study_records")}
         migrations = {
             "evidence_chain_json": "TEXT",
+            "grounding_json": "TEXT",
             "created_by_user": "VARCHAR(120)",
             "signed_off_by": "VARCHAR(120)",
             "signed_off_at": "TIMESTAMP",
@@ -136,11 +137,17 @@ def init_db() -> None:
 # User CRUD helpers
 # ---------------------------------------------------------------------------
 def get_user_by_username(db: Session, username: str) -> Optional[UserRecord]:
-    return db.query(UserRecord).filter(UserRecord.username == username).first()
+    clean = (username or "").strip().lower()
+    if not clean:
+        return None
+    return db.query(UserRecord).filter(func.lower(UserRecord.username) == clean).first()
 
 
 def get_user_by_email(db: Session, email: str) -> Optional[UserRecord]:
-    return db.query(UserRecord).filter(UserRecord.email == email).first()
+    clean = (email or "").strip().lower()
+    if not clean:
+        return None
+    return db.query(UserRecord).filter(func.lower(UserRecord.email) == clean).first()
 
 
 def create_user(
@@ -219,6 +226,7 @@ def save_study(
         cds_json=_to_json(d.get("clinical_decision_support") or d.get("cds")),
         patient_guidance_json=_to_json(d.get("patient_guidance")),
         evidence_chain_json=_to_json(evidence_chain),
+        grounding_json=_to_json(d.get("grounding")),
         urgency_level=d.get("urgency_level")
         or (d.get("radiology_report") or {}).get("urgency_level", "ROUTINE"),
         processing_time_ms=d.get("processing_time_ms"),

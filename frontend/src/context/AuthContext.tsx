@@ -36,7 +36,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
-  // Verify existing token on mount
+  // Verify existing token on mount (do NOT log out on cold-start/network errors)
   useEffect(() => {
     if (!token) return;
     api
@@ -45,12 +45,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(profile);
         localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(profile));
       })
-      .catch(() => {
-        // Token expired or invalid
-        localStorage.removeItem(TOKEN_STORAGE_KEY);
-        localStorage.removeItem(USER_STORAGE_KEY);
-        setToken(null);
-        setUser(null);
+      .catch((err) => {
+        const status = err?.response?.status;
+        if (status === 401 || status === 403) {
+          localStorage.removeItem(TOKEN_STORAGE_KEY);
+          localStorage.removeItem(USER_STORAGE_KEY);
+          setToken(null);
+          setUser(null);
+        }
       });
   }, [token]);
 

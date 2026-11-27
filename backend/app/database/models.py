@@ -81,6 +81,7 @@ class StudyRecord(Base):
     cds_json = Column(Text, nullable=True)                # ClinicalDecisionSupport dict
     patient_guidance_json = Column(Text, nullable=True)   # PatientGuidance dict
     evidence_chain_json = Column(Text, nullable=True)     # List[EvidenceChainLink]
+    grounding_json = Column(Text, nullable=True)          # GroundingData dict (annotated + heatmap b64)
 
     # Risk / workflow fields
     urgency_level = Column(String(20), default="ROUTINE", nullable=False)
@@ -169,4 +170,5 @@ class StudyRecord(Base):
             "cds": _safe_json(self.cds_json),
             "patient_guidance": _safe_json(self.patient_guidance_json),
             "evidence_chain": _safe_json(self.evidence_chain_json) or [],
+            "grounding": _safe_json(self.grounding_json),
         }
